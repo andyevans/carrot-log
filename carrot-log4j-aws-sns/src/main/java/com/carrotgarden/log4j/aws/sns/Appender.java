@@ -26,7 +26,11 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig.Feature;
 
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sns.AmazonSNSAsync;
 import com.amazonaws.services.sns.AmazonSNSAsyncClient;
 import com.amazonaws.services.sns.model.ListTopicsResult;
@@ -50,9 +54,21 @@ public class Appender extends AppenderSkeleton {
 
 	//
 
-	/** log4j config option; amazon credentials file; must exist */
+	/** log4j config option; amazon credentials file; optional; */
 	@JsonProperty
-	protected String credentials;
+	protected String credentialsFile;
+	
+	/** log4j config option; amazon accessKey; optional; */
+	@JsonProperty
+	protected String accessKey;
+	
+	/** log4j config option; amazon secretKey; optional;*/
+	@JsonProperty
+	protected String secretKey;
+	
+	/** log4j config option; SNS topic name; must exist */
+	@JsonProperty
+	protected String region;
 
 	/** log4j config option; SNS topic name; must exist */
 	@JsonProperty
@@ -75,7 +91,7 @@ public class Appender extends AppenderSkeleton {
 
 	/** log4j config option; layout class name; optional */
 	@JsonProperty
-	public Layout getLaoyut() {
+	public Layout getLayout() {
 		return super.getLayout();
 	}
 
@@ -157,12 +173,24 @@ public class Appender extends AppenderSkeleton {
 		return isActive && evaluator.isTriggeringEvent(event);
 	}
 
-	public boolean hasCredentials() {
-		return credentials != null;
+	public boolean hasCredentialsFile() {
+		return credentialsFile != null;
+	}
+	
+	public boolean hasAccessKey() {
+		return accessKey != null;
+	}
+	
+	public boolean hasSecretKey() {
+		return secretKey != null;
 	}
 
 	public boolean hasTopicName() {
 		return topicName != null;
+	}
+	
+	public boolean hasRegion() {
+		return region != null;
 	}
 
 	public boolean hasTopicSubject() {
@@ -188,18 +216,19 @@ public class Appender extends AppenderSkeleton {
 	/** provide amazon login credentials from file */
 	protected boolean ensureCredentials() {
 
-		if (hasCredentials()) {
+		if (hasCredentialsFile()) {
 
-			final File file = new File(getCredentials());
+			final File file = new File(getCredentialsFile());
 
 			if (file.exists() && file.isFile() && file.canRead()) {
 				return true;
 			}
 
+		} else if (hasAccessKey() && hasSecretKey()){
+			return true;
 		}
 
-		LogLog.error("sns: ivalid option", new IllegalArgumentException(
-				"Credentials"));
+		LogLog.error("sns: invalid credentials", new IllegalArgumentException());
 
 		return false;
 
@@ -214,7 +243,7 @@ public class Appender extends AppenderSkeleton {
 
 		} else {
 
-			LogLog.error("sns: ivalid option", new IllegalArgumentException(
+			LogLog.error("sns: invalid option", new IllegalArgumentException(
 					"TopicName"));
 
 			return false;
@@ -226,24 +255,35 @@ public class Appender extends AppenderSkeleton {
 	/** instantiate amazon client */
 	protected boolean ensureAmazonClient() {
 
-		try {
-
-			final File file = new File(getCredentials());
-
-			final AWSCredentials creds = new PropertiesCredentials(file);
-
-			amazonClient = new AmazonSNSAsyncClient(creds, service);
-
-			return true;
-
-		} catch (final Exception e) {
-
-			LogLog.error("sns: amazon client init failure", e);
-
-			return false;
-
+		//if we don't have an aws credentials file, allow these values to be set in the log4j properties file.
+		if (hasCredentialsFile()) {
+			try {
+	
+				final File file = new File(getCredentialsFile());
+	
+				final AWSCredentials creds = new PropertiesCredentials(file);
+	
+				amazonClient = new AmazonSNSAsyncClient(creds, service);		
+	
+			} catch (final Exception e) {
+	
+				LogLog.error("sns: amazon client init failure", e);
+	
+				return false;
+			}
+		} else {
+			BasicAWSCredentials creds = new BasicAWSCredentials(getAccessKey(), getSecretKey());
+			
+			amazonClient = new AmazonSNSAsyncClient(creds, service);			
 		}
-
+		
+		//if we are passed a region, set it here. Otherwise the AWS SDK will default to us-east-1
+		if (hasRegion()){
+			
+			amazonClient.setRegion(Region.getRegion(Regions.valueOf(region)));
+		}
+		
+		return true;	
 	}
 
 	/** resolve topic ARN from topic name */
@@ -452,12 +492,36 @@ public class Appender extends AppenderSkeleton {
 		}
 	}
 
-	public String getCredentials() {
-		return credentials;
+	public String getCredentialsFile() {
+		return credentialsFile;
 	}
 
-	public void setCredentials(final String credentials) {
-		this.credentials = credentials;
+	public void setCredentials(final String credentialsFile) {
+		this.credentialsFile = credentialsFile;
+	}
+	
+	public String getRegion() {
+		return region;
+	}
+
+	public void setRegion(final String region) {
+		this.region = region;
+	}
+	
+	public String getAccessKey() {
+		return accessKey;
+	}
+
+	public void setAccessKey(final String accessKey) {
+		this.accessKey = accessKey;
+	}
+	
+	public String getSecretKey() {
+		return secretKey;
+	}
+
+	public void setSecretKey(final String secretKey) {
+		this.secretKey = secretKey;
 	}
 
 	public String getTopicName() {

@@ -51,7 +51,22 @@ so we made a new one:
 ### snapshot repo
 [sonatype snapshots](https://oss.sonatype.org/content/repositories/snapshots/)
 
-### example log4j.properties
+### example log4j.properties - no credentials file, passing aws region and log4j pattern output
+```
+log4j.appender.SNS=com.carrotgarden.log4j.aws.sns.Appender
+log4j.appender.SNS.threshold=INFO
+#log4j.appender.SNS.credentials=${user.home}/.amazon/publish-notification.properties
+log4j.appender.SNS.region=AP_SOUTHEAST_2
+log4j.appender.SNS.accessKey=YOUR_ACCESS_KEY
+log4j.appender.SNS.secretKey=YOUR_SECRET_KEY
+log4j.appender.SNS.topicName=carrot-tester
+log4j.appender.SNS.topicSubject=karaf.company.com
+log4j.appender.SNS.evaluatorClassName=com.carrotgarden.log4j.aws.sns.EvaluatorThrottler
+log4j.appender.SNS.evaluatorProperties= period=10 \n unit=SECONDS \n mask=LOGGER_NAME,LINE_NUMBER
+log4j.appender.SNS.layout=org.apache.log4j.PatternLayout
+log4j.appender.SNS.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
+
+### example log4j.properties - using credentials file and json output
 ```
 log4j.appender.SNS=com.carrotgarden.log4j.aws.sns.Appender
 log4j.appender.SNS.threshold=INFO
@@ -62,19 +77,4 @@ log4j.appender.SNS.evaluatorClassName=com.carrotgarden.log4j.aws.sns.EvaluatorTh
 log4j.appender.SNS.evaluatorProperties= period=10 \n unit=SECONDS \n mask=LOGGER_NAME,LINE_NUMBER
 log4j.appender.SNS.layout=com.carrotgarden.log4j.aws.sns.LayoutJSON
 log4j.appender.SNS.layout.UsePrettyPrinter=true
-```
-
-### example posted log entry
-```
-{
-  "logger" : "bench.Main_03",
-  "level" : "FATAL",
-  "time" : "2012-08-15T19:26:40.738-05:00",
-  "thread" : "main",
-  "message" : "amazon tester",
-  "file" : "Main_03.java",
-  "class" : "bench.Main_03",
-  "method" : "test",
-  "line" : "24"
-}
 ```
