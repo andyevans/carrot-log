@@ -65,6 +65,7 @@ log4j.appender.SNS.evaluatorClassName=com.carrotgarden.log4j.aws.sns.EvaluatorTh
 log4j.appender.SNS.evaluatorProperties= period=10 \n unit=SECONDS \n mask=LOGGER_NAME,LINE_NUMBER
 log4j.appender.SNS.layout=org.apache.log4j.PatternLayout
 log4j.appender.SNS.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
+```
 
 ### example log4j.properties - using credentials file and json output
 ```
